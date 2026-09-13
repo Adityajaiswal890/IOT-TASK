@@ -1,0 +1,29 @@
+// Task 2: Sensor-Based Simulation (LDR + LED)
+const int ldrPin = A0;   // LDR analog pin se connect hai
+const int ledPin = 13;   // LED digital pin se connect hai
+
+int sensorValue = 0;     // LDR ki reading store karne ke liye
+int threshold = 500;     // Andhera ya ujala decide karne ki limit
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+  Serial.begin(9600);    // Serial monitor debugging ke liye
+}
+
+void loop() {
+  // 1. Sensor ki value read karein (0 se 1023)
+  sensorValue = analogRead(ldrPin);
+
+  // Serial monitor par value print karein
+  Serial.print("Light Level: ");
+  Serial.println(sensorValue);
+
+  // 2. Condition check: Agar andhera ho (value kam ho) toh LED ON
+  if (sensorValue < threshold) {
+    digitalWrite(ledPin, HIGH); // LED ON
+  } else {
+    digitalWrite(ledPin, LOW);  // LED OFF
+  }
+
+  delay(200); // Thoda pause reading ke beech
+}
