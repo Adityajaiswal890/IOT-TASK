@@ -1,0 +1,182 @@
+. Install and load packages
+# Install packages only once
+install.packages("tidyverse")
+
+# Load package
+library(tidyverse)
+2. Import the dataset
+If you are using the CSV from the Week 2 package:
+data <- read.csv("data/student-mat-sample.csv")
+
+# View first 6 rows
+head(data)
+
+# View last 6 rows
+tail(data)
+
+# Dataset structure
+str(data)
+
+# Number of rows and columns
+dim(data)
+3. Understand the dataset
+# Column names
+names(data)
+
+# Summary statistics
+summary(data)
+
+# Number of students
+nrow(data)
+
+# Number of variables
+ncol(data)
+4. Check missing values
+# Missing values in each column
+colSums(is.na(data))
+
+# Total missing values
+sum(is.na(data))
+5. Check duplicate records
+# Number of duplicate rows
+sum(duplicated(data))
+
+# Display duplicate rows
+data[duplicated(data), ]
+6. Data cleaning
+# Convert sex into categorical variable
+data$sex <- as.factor(data$sex)
+
+# Check structure again
+str(data)
+
+# Check final grade
+summary(data$G3)
+7. Basic statistics
+# Mean
+mean(data$G3)
+
+# Median
+median(data$G3)
+
+# Standard deviation
+sd(data$G3)
+
+# Minimum
+min(data$G3)
+
+# Maximum
+max(data$G3)
+8. Histogram
+ggplot(data, aes(x = G3)) +
+  geom_histogram(
+    binwidth = 1,
+    color = "black"
+  ) +
+  labs(
+    title = "Distribution of Final Grades",
+    x = "Final Grade",
+    y = "Number of Students"
+  )
+Interpretation: This graph shows how students' final grades are distributed. It helps identify the most common score range and whether the distribution is concentrated or spread out.
+9. Scatter Plot
+ggplot(data, aes(x = studytime, y = G3)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    title = "Study Time vs Final Grade",
+    x = "Study Time",
+    y = "Final Grade"
+  )
+Interpretation: The scatter plot helps examine the relationship between weekly study time and final grade. The trend line provides a simple visual indication of the relationship.
+10. Box Plot
+ggplot(data, aes(x = sex, y = G3)) +
+  geom_boxplot() +
+  labs(
+    title = "Final Grade Distribution by Sex",
+    x = "Sex",
+    y = "Final Grade"
+  )
+Interpretation: The box plot compares the distribution, median and spread of final grades between the two sex categories.
+11. Correlation Analysis
+cor_data <- data %>%
+  select(studytime, absences, G1, G2, G3)
+
+cor(cor_data)
+12. Correlation Heatmap
+install.packages("reshape2")
+library(reshape2)
+
+cor_matrix <- cor(cor_data)
+
+cor_long <- melt(cor_matrix)
+
+ggplot(cor_long, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  geom_text(aes(label = round(value, 2))) +
+  labs(
+    title = "Correlation Heatmap",
+    x = "",
+    y = "",
+    fill = "Correlation"
+  )
+13. Study-time analysis
+study_summary <- data %>%
+  group_by(studytime) %>%
+  summarise(
+    Students = n(),
+    Average_Grade = mean(G3),
+    Median_Grade = median(G3)
+  )
+
+print(study_summary)
+14. Find students with grade ≥ 10
+data %>%
+  filter(G3 >= 10)
+Percentage:
+pass_percentage <- mean(data$G3 >= 10) * 100
+
+print(pass_percentage)
+15. Save cleaned dataset
+write.csv(
+  data,
+  "data/cleaned_student_performance.csv",
+  row.names = FALSE
+)
+16. Save graphs
+Example:
+ggsave(
+  "figures/final_grade_histogram.png",
+  width = 8,
+  height = 5
+)
+17. Complete Week 2 workflow
+Dataset
+   ↓
+Import Data
+   ↓
+Understand Data
+   ↓
+Check Missing Values
+   ↓
+Check Duplicates
+   ↓
+Clean Data
+   ↓
+Summary Statistics
+   ↓
+EDA
+   ↓
+Histogram
+   ↓
+Scatter Plot
+   ↓
+Box Plot
+   ↓
+Correlation Heatmap
+   ↓
+Interpret Results
+   ↓
+Save Results
+   ↓
+Final DOC + GitHub
