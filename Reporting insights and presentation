@@ -1,0 +1,637 @@
+# ============================================================
+# FINAL PROJECT REPORT - DATA SCIENCE USING R
+# ============================================================
+# Objective:
+# Synthesize the complete data science work into a final report
+# containing analysis, visualizations, model results,
+# recommendations and future directions.
+#
+# Dataset:
+# Student Performance Dataset
+#
+# Tools:
+# R, tidyverse, ggplot2, caret, rpart, rpart.plot, pROC
+# ============================================================
+
+
+# ============================================================
+# 1. INSTALL PACKAGES IF REQUIRED
+# ============================================================
+
+# Run these only once if packages are not installed.
+
+# install.packages("tidyverse")
+# install.packages("caret")
+# install.packages("rpart")
+# install.packages("rpart.plot")
+# install.packages("pROC")
+
+
+# ============================================================
+# 2. LOAD REQUIRED LIBRARIES
+# ============================================================
+
+library(tidyverse)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(pROC)
+
+
+# ============================================================
+# 3. SET RANDOM SEED
+# ============================================================
+# This makes the analysis reproducible.
+
+set.seed(42)
+
+
+# ============================================================
+# 4. CREATE OUTPUT FOLDER
+# ============================================================
+
+if (!dir.exists("output")) {
+  dir.create("output")
+}
+
+if (!dir.exists("output/plots")) {
+  dir.create("output/plots")
+}
+
+
+# ============================================================
+# 5. LOAD DATASET
+# ============================================================
+
+data <- read_csv(
+  "data/student_performance_modeling.csv"
+)
+
+
+# ============================================================
+# 6. INITIAL DATA INSPECTION
+# ============================================================
+
+# Display first rows
+head(data)
+
+# Display structure
+str(data)
+
+# Display number of rows and columns
+dim(data)
+
+# Display column names
+names(data)
+
+# Display summary statistics
+summary(data)
+
+
+# ============================================================
+# 7. CHECK DATA QUALITY
+# ============================================================
+
+# Check missing values
+missing_values <- colSums(is.na(data))
+
+print(missing_values)
+
+
+# Check duplicate rows
+duplicate_rows <- sum(duplicated(data))
+
+cat(
+  "Number of duplicate rows:",
+  duplicate_rows,
+  "\n"
+)
+
+
+# ============================================================
+# 8. PREPARE TARGET VARIABLE
+# ============================================================
+# The target variable is Pass/Below Pass.
+
+data$pass_status <- factor(
+  data$pass_status,
+  levels = c("Below Pass", "Pass")
+)
+
+
+# ============================================================
+# 9. BASIC DATA SUMMARY
+# ============================================================
+
+cat("\nDataset Summary\n")
+cat("------------------------\n")
+
+cat(
+  "Number of observations:",
+  nrow(data),
+  "\n"
+)
+
+cat(
+  "Number of variables:",
+  ncol(data),
+  "\n"
+)
+
+cat(
+  "Average G1:",
+  mean(data$G1, na.rm = TRUE),
+  "\n"
+)
+
+cat(
+  "Average G2:",
+  mean(data$G2, na.rm = TRUE),
+  "\n"
+)
+
+cat(
+  "Average absences:",
+  mean(data$absences, na.rm = TRUE),
+  "\n"
+)
+
+
+# ============================================================
+# 10. TARGET VARIABLE DISTRIBUTION
+# ============================================================
+
+target_table <- table(data$pass_status)
+
+print(target_table)
+
+target_percentage <- prop.table(target_table) * 100
+
+print(target_percentage)
+
+
+# ============================================================
+# 11. VISUALIZATION 1 - PASS STATUS
+# ============================================================
+
+plot_pass <- ggplot(
+  data,
+  aes(x = pass_status)
+) +
+  geom_bar() +
+  labs(
+    title = "Student Pass Status Distribution",
+    x = "Pass Status",
+    y = "Number of Students"
+  ) +
+  theme_minimal()
+
+print(plot_pass)
+
+
+# Save plot
+ggsave(
+  "output/plots/pass_status_distribution.png",
+  plot_pass,
+  width = 7,
+  height = 5
+)
+
+
+# ============================================================
+# 12. VISUALIZATION 2 - STUDY TIME
+# ============================================================
+
+plot_studytime <- ggplot(
+  data,
+  aes(x = studytime)
+) +
+  geom_bar() +
+  labs(
+    title = "Distribution of Weekly Study Time",
+    x = "Study Time Category",
+    y = "Number of Students"
+  ) +
+  theme_minimal()
+
+print(plot_studytime)
+
+ggsave(
+  "output/plots/study_time_distribution.png",
+  plot_studytime,
+  width = 7,
+  height = 5
+)
+
+
+# ============================================================
+# 13. VISUALIZATION 3 - ABSENCES VS FINAL STATUS
+# ============================================================
+
+plot_absences <- ggplot(
+  data,
+  aes(
+    x = pass_status,
+    y = absences
+  )
+) +
+  geom_boxplot() +
+  labs(
+    title = "Absences by Student Pass Status",
+    x = "Pass Status",
+    y = "Number of Absences"
+  ) +
+  theme_minimal()
+
+print(plot_absences)
+
+ggsave(
+  "output/plots/absences_by_status.png",
+  plot_absences,
+  width = 7,
+  height = 5
+)
+
+
+# ============================================================
+# 14. VISUALIZATION 4 - G1 VS G2
+# ============================================================
+
+plot_grades <- ggplot(
+  data,
+  aes(
+    x = G1,
+    y = G2,
+    color = pass_status
+  )
+) +
+  geom_point(size = 3) +
+  labs(
+    title = "Relationship Between First and Second Period Grades",
+    x = "G1 Grade",
+    y = "G2 Grade",
+    color = "Pass Status"
+  ) +
+  theme_minimal()
+
+print(plot_grades)
+
+ggsave(
+  "output/plots/g1_vs_g2.png",
+  plot_grades,
+  width = 7,
+  height = 5
+)
+
+
+# ============================================================
+# 15. CORRELATION ANALYSIS
+# ============================================================
+
+numeric_data <- data %>%
+  select(
+    studytime,
+    absences,
+    G1,
+    G2,
+    G3
+  )
+
+correlation_matrix <- cor(
+  numeric_data,
+  use = "complete.obs"
+)
+
+print(correlation_matrix)
+
+
+# Save correlation matrix
+write.csv(
+  correlation_matrix,
+  "output/correlation_matrix.csv"
+)
+
+
+# ============================================================
+# 16. PREPARE DATA FOR MODELING
+# ============================================================
+
+model_data <- data %>%
+  select(
+    pass_status,
+    studytime,
+    absences,
+    G1,
+    G2
+  )
+
+
+# ============================================================
+# 17. SPLIT DATA INTO TRAINING AND TESTING SETS
+# ============================================================
+# 80% training
+# 20% testing
+
+train_index <- createDataPartition(
+  model_data$pass_status,
+  p = 0.80,
+  list = FALSE
+)
+
+train_data <- model_data[train_index, ]
+
+test_data <- model_data[-train_index, ]
+
+
+cat(
+  "Training observations:",
+  nrow(train_data),
+  "\n"
+)
+
+cat(
+  "Testing observations:",
+  nrow(test_data),
+  "\n"
+)
+
+
+# ============================================================
+# 18. LOGISTIC REGRESSION MODEL
+# ============================================================
+
+log_model <- glm(
+  pass_status ~ studytime +
+    absences +
+    G1 +
+    G2,
+  data = train_data,
+  family = binomial
+)
+
+
+# Display model summary
+summary(log_model)
+
+
+# ============================================================
+# 19. LOGISTIC REGRESSION PREDICTIONS
+# ============================================================
+
+log_probability <- predict(
+  log_model,
+  newdata = test_data,
+  type = "response"
+)
+
+
+# Convert probability to class
+log_prediction <- ifelse(
+  log_probability >= 0.50,
+  "Pass",
+  "Below Pass"
+)
+
+
+log_prediction <- factor(
+  log_prediction,
+  levels = levels(test_data$pass_status)
+)
+
+
+# ============================================================
+# 20. LOGISTIC REGRESSION CONFUSION MATRIX
+# ============================================================
+
+log_cm <- confusionMatrix(
+  log_prediction,
+  test_data$pass_status,
+  positive = "Pass"
+)
+
+print(log_cm)
+
+
+# ============================================================
+# 21. DECISION TREE MODEL
+# ============================================================
+
+tree_model <- rpart(
+  pass_status ~ studytime +
+    absences +
+    G1 +
+    G2,
+  data = train_data,
+  method = "class",
+  control = rpart.control(
+    cp = 0.01
+  )
+)
+
+
+# Display tree model
+print(tree_model)
+
+
+# ============================================================
+# 22. VISUALIZE DECISION TREE
+# ============================================================
+
+png(
+  "output/plots/decision_tree.png",
+  width = 900,
+  height = 700
+)
+
+rpart.plot(
+  tree_model,
+  main = "Decision Tree for Student Performance"
+)
+
+dev.off()
+
+
+# ============================================================
+# 23. DECISION TREE PREDICTIONS
+# ============================================================
+
+tree_prediction <- predict(
+  tree_model,
+  newdata = test_data,
+  type = "class"
+)
+
+
+# ============================================================
+# 24. DECISION TREE CONFUSION MATRIX
+# ============================================================
+
+tree_cm <- confusionMatrix(
+  tree_prediction,
+  test_data$pass_status,
+  positive = "Pass"
+)
+
+print(tree_cm)
+
+
+# ============================================================
+# 25. CALCULATE MODEL METRICS
+# ============================================================
+
+log_accuracy <- log_cm$overall["Accuracy"]
+
+log_precision <- log_cm$byClass[
+  "Pos Pred Value"
+]
+
+log_recall <- log_cm$byClass[
+  "Sensitivity"
+]
+
+
+tree_accuracy <- tree_cm$overall["Accuracy"]
+
+tree_precision <- tree_cm$byClass[
+  "Pos Pred Value"
+]
+
+tree_recall <- tree_cm$byClass[
+  "Sensitivity"
+]
+
+
+# ============================================================
+# 26. CALCULATE ROC AND AUC
+# ============================================================
+
+roc_logistic <- roc(
+  test_data$pass_status,
+  log_probability,
+  levels = c(
+    "Below Pass",
+    "Pass"
+  )
+)
+
+
+log_auc <- auc(
+  roc_logistic
+)
+
+
+# Decision Tree probability
+tree_probability <- predict(
+  tree_model,
+  newdata = test_data,
+  type = "prob"
+)[, "Pass"]
+
+
+roc_tree <- roc(
+  test_data$pass_status,
+  tree_probability,
+  levels = c(
+    "Below Pass",
+    "Pass"
+  )
+)
+
+
+tree_auc <- auc(
+  roc_tree
+)
+
+
+# ============================================================
+# 27. ROC CURVE VISUALIZATION
+# ============================================================
+
+png(
+  "output/plots/roc_curve_comparison.png",
+  width = 900,
+  height = 700
+)
+
+plot(
+  roc_logistic,
+  main = "ROC Curve Comparison",
+  lwd = 2
+)
+
+lines(
+  roc_tree,
+  lwd = 2,
+  lty = 2
+)
+
+legend(
+  "bottomright",
+  legend = c(
+    "Logistic Regression",
+    "Decision Tree"
+  ),
+  lty = c(1, 2),
+  lwd = 2
+)
+
+dev.off()
+
+
+# ============================================================
+# 28. CREATE MODEL COMPARISON TABLE
+# ============================================================
+
+model_results <- data.frame(
+
+  Model = c(
+    "Logistic Regression",
+    "Decision Tree"
+  ),
+
+  Accuracy = c(
+    as.numeric(log_accuracy),
+    as.numeric(tree_accuracy)
+  ),
+
+  Precision = c(
+    as.numeric(log_precision),
+    as.numeric(tree_precision)
+  ),
+
+  Recall = c(
+    as.numeric(log_recall),
+    as.numeric(tree_recall)
+  ),
+
+  AUC = c(
+    as.numeric(log_auc),
+    as.numeric(tree_auc)
+  )
+)
+
+
+# Round values
+model_results <- model_results %>%
+  mutate(
+    Accuracy = round(Accuracy, 3),
+    Precision = round(Precision, 3),
+    Recall = round(Recall, 3),
+    AUC = round(AUC, 3)
+  )
+
+
+# Display results
+print(model_results)
+
+
+# Save results
+write_csv(
+  model_results,
+  "output/model_comparison.csv"
+)
+
+
+# ============================================================
+# 29. MODEL PERFORMANCE VISUALIZATION
+# ============================================================
