@@ -1,0 +1,572 @@
+# ============================================================
+# PROJECT: Predictive Modeling Using R
+# OBJECTIVE: Predict Student Pass/Below Pass Status
+# MODELS: Logistic Regression and Decision Tree
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 1. INSTALL REQUIRED PACKAGES
+# ------------------------------------------------------------
+# Run these lines only if the packages are not already installed.
+
+# install.packages("tidyverse")
+# install.packages("caret")
+# install.packages("rpart")
+# install.packages("rpart.plot")
+# install.packages("pROC")
+
+
+# ------------------------------------------------------------
+# 2. LOAD REQUIRED LIBRARIES
+# ------------------------------------------------------------
+
+library(tidyverse)     # Data manipulation and visualization
+library(caret)         # Data splitting and model evaluation
+library(rpart)         # Decision Tree model
+library(rpart.plot)    # Decision Tree visualization
+library(pROC)          # ROC curve and AUC
+
+
+# ------------------------------------------------------------
+# 3. SET RANDOM SEED
+# ------------------------------------------------------------
+# Setting a seed makes the results reproducible.
+
+set.seed(42)
+
+
+# ------------------------------------------------------------
+# 4. LOAD THE DATASET
+# ------------------------------------------------------------
+# Change the file path if your CSV file is stored elsewhere.
+
+data <- read_csv("data/student_performance_modeling.csv")
+
+
+# ------------------------------------------------------------
+# 5. VIEW BASIC INFORMATION ABOUT THE DATA
+# ------------------------------------------------------------
+
+# Display the first six rows
+head(data)
+
+# Display the structure of the dataset
+str(data)
+
+# Display the dimensions: rows and columns
+dim(data)
+
+# Display column names
+names(data)
+
+# Display summary statistics
+summary(data)
+
+
+# ------------------------------------------------------------
+# 6. CHECK FOR MISSING VALUES
+# ------------------------------------------------------------
+# Count missing values in every column.
+
+colSums(is.na(data))
+
+
+# ------------------------------------------------------------
+# 7. CHECK FOR DUPLICATE ROWS
+# ------------------------------------------------------------
+
+sum(duplicated(data))
+
+
+# ------------------------------------------------------------
+# 8. PREPARE THE TARGET VARIABLE
+# ------------------------------------------------------------
+# The target variable is Pass/Below Pass.
+# "Below Pass" is treated as the negative class.
+# "Pass" is treated as the positive class.
+
+data$pass_status <- factor(
+  data$pass_status,
+  levels = c("Below Pass", "Pass")
+)
+
+
+# ------------------------------------------------------------
+# 9. CHECK TARGET CLASS DISTRIBUTION
+# ------------------------------------------------------------
+
+table(data$pass_status)
+
+# Display class proportions
+prop.table(table(data$pass_status))
+
+
+# ------------------------------------------------------------
+# 10. SELECT VARIABLES FOR MODELING
+# ------------------------------------------------------------
+# Predictors:
+# studytime = Weekly study time
+# absences  = Number of absences
+# G1        = First-period grade
+# G2        = Second-period grade
+#
+# Target:
+# pass_status = Pass or Below Pass
+
+model_data <- data %>%
+  select(
+    pass_status,
+    studytime,
+    absences,
+    G1,
+    G2
+  )
+
+
+# ------------------------------------------------------------
+# 11. CHECK THE FINAL MODELING DATA
+# ------------------------------------------------------------
+
+head(model_data)
+
+summary(model_data)
+
+
+# ------------------------------------------------------------
+# 12. SPLIT DATA INTO TRAINING AND TESTING DATA
+# ------------------------------------------------------------
+# 80% data is used for training.
+# 20% data is used for testing.
+
+train_index <- createDataPartition(
+  model_data$pass_status,
+  p = 0.80,
+  list = FALSE
+)
+
+train_data <- model_data[train_index, ]
+
+test_data <- model_data[-train_index, ]
+
+
+# ------------------------------------------------------------
+# 13. CHECK TRAINING AND TESTING DATA
+# ------------------------------------------------------------
+
+cat("Training rows:", nrow(train_data), "\n")
+cat("Testing rows:", nrow(test_data), "\n")
+
+
+# ============================================================
+# MODEL 1: LOGISTIC REGRESSION
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 14. TRAIN LOGISTIC REGRESSION MODEL
+# ------------------------------------------------------------
+# Logistic Regression is suitable for binary classification.
+
+log_model <- glm(
+  pass_status ~ studytime + absences + G1 + G2,
+  data = train_data,
+  family = binomial
+)
+
+
+# ------------------------------------------------------------
+# 15. DISPLAY LOGISTIC REGRESSION RESULTS
+# ------------------------------------------------------------
+
+summary(log_model)
+
+
+# ------------------------------------------------------------
+# 16. MAKE PROBABILITY PREDICTIONS
+# ------------------------------------------------------------
+# type = "response" returns probability values.
+
+log_probability <- predict(
+  log_model,
+  newdata = test_data,
+  type = "response"
+)
+
+
+# ------------------------------------------------------------
+# 17. CONVERT PROBABILITIES INTO CLASS PREDICTIONS
+# ------------------------------------------------------------
+# If probability >= 0.50, prediction is Pass.
+# Otherwise, prediction is Below Pass.
+
+log_prediction <- ifelse(
+  log_probability >= 0.50,
+  "Pass",
+  "Below Pass"
+)
+
+
+# Convert prediction into factor
+log_prediction <- factor(
+  log_prediction,
+  levels = levels(test_data$pass_status)
+)
+
+
+# ------------------------------------------------------------
+# 18. CONFUSION MATRIX FOR LOGISTIC REGRESSION
+# ------------------------------------------------------------
+
+log_cm <- confusionMatrix(
+  log_prediction,
+  test_data$pass_status,
+  positive = "Pass"
+)
+
+print(log_cm)
+
+
+# ------------------------------------------------------------
+# 19. EXTRACT LOGISTIC REGRESSION METRICS
+# ------------------------------------------------------------
+
+log_accuracy <- log_cm$overall["Accuracy"]
+
+log_precision <- log_cm$byClass["Pos Pred Value"]
+
+log_recall <- log_cm$byClass["Sensitivity"]
+
+
+# Display metrics
+cat("Logistic Regression Accuracy:",
+    log_accuracy, "\n")
+
+cat("Logistic Regression Precision:",
+    log_precision, "\n")
+
+cat("Logistic Regression Recall:",
+    log_recall, "\n")
+
+
+# ============================================================
+# MODEL 2: DECISION TREE
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 20. TRAIN DECISION TREE MODEL
+# ------------------------------------------------------------
+# The Decision Tree can identify non-linear relationships.
+
+tree_model <- rpart(
+  pass_status ~ studytime + absences + G1 + G2,
+  data = train_data,
+  method = "class",
+  control = rpart.control(cp = 0.01)
+)
+
+
+# ------------------------------------------------------------
+# 21. DISPLAY DECISION TREE MODEL
+# ------------------------------------------------------------
+
+print(tree_model)
+
+summary(tree_model)
+
+
+# ------------------------------------------------------------
+# 22. VISUALIZE DECISION TREE
+# ------------------------------------------------------------
+
+rpart.plot(
+  tree_model,
+  main = "Decision Tree for Student Performance"
+)
+
+
+# ------------------------------------------------------------
+# 23. MAKE DECISION TREE PREDICTIONS
+# ------------------------------------------------------------
+
+tree_prediction <- predict(
+  tree_model,
+  newdata = test_data,
+  type = "class"
+)
+
+
+# ------------------------------------------------------------
+# 24. CONFUSION MATRIX FOR DECISION TREE
+# ------------------------------------------------------------
+
+tree_cm <- confusionMatrix(
+  tree_prediction,
+  test_data$pass_status,
+  positive = "Pass"
+)
+
+print(tree_cm)
+
+
+# ------------------------------------------------------------
+# 25. EXTRACT DECISION TREE METRICS
+# ------------------------------------------------------------
+
+tree_accuracy <- tree_cm$overall["Accuracy"]
+
+tree_precision <- tree_cm$byClass["Pos Pred Value"]
+
+tree_recall <- tree_cm$byClass["Sensitivity"]
+
+
+# Display metrics
+cat("Decision Tree Accuracy:",
+    tree_accuracy, "\n")
+
+cat("Decision Tree Precision:",
+    tree_precision, "\n")
+
+cat("Decision Tree Recall:",
+    tree_recall, "\n")
+
+
+# ============================================================
+# ROC CURVE AND AUC
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 26. CREATE ROC CURVE FOR LOGISTIC REGRESSION
+# ------------------------------------------------------------
+
+roc_logistic <- roc(
+  test_data$pass_status,
+  log_probability,
+  levels = c("Below Pass", "Pass")
+)
+
+
+# ------------------------------------------------------------
+# 27. CALCULATE LOGISTIC REGRESSION AUC
+# ------------------------------------------------------------
+
+log_auc <- auc(roc_logistic)
+
+cat("Logistic Regression AUC:",
+    log_auc, "\n")
+
+
+# ------------------------------------------------------------
+# 28. GET DECISION TREE PROBABILITIES
+# ------------------------------------------------------------
+# Probability of the positive class "Pass".
+
+tree_probability <- predict(
+  tree_model,
+  newdata = test_data,
+  type = "prob"
+)[, "Pass"]
+
+
+# ------------------------------------------------------------
+# 29. CREATE ROC CURVE FOR DECISION TREE
+# ------------------------------------------------------------
+
+roc_tree <- roc(
+  test_data$pass_status,
+  tree_probability,
+  levels = c("Below Pass", "Pass")
+)
+
+
+# ------------------------------------------------------------
+# 30. CALCULATE DECISION TREE AUC
+# ------------------------------------------------------------
+
+tree_auc <- auc(roc_tree)
+
+cat("Decision Tree AUC:",
+    tree_auc, "\n")
+
+
+# ------------------------------------------------------------
+# 31. PLOT ROC CURVES
+# ------------------------------------------------------------
+
+plot(
+  roc_logistic,
+  main = "ROC Curve Comparison",
+  lwd = 2
+)
+
+lines(
+  roc_tree,
+  lwd = 2,
+  lty = 2
+)
+
+legend(
+  "bottomright",
+  legend = c(
+    "Logistic Regression",
+    "Decision Tree"
+  ),
+  lty = c(1, 2),
+  lwd = 2
+)
+
+
+# ============================================================
+# MODEL PERFORMANCE COMPARISON
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 32. CREATE PERFORMANCE TABLE
+# ------------------------------------------------------------
+
+performance <- data.frame(
+
+  Model = c(
+    "Logistic Regression",
+    "Decision Tree"
+  ),
+
+  Accuracy = c(
+    as.numeric(log_accuracy),
+    as.numeric(tree_accuracy)
+  ),
+
+  Precision = c(
+    as.numeric(log_precision),
+    as.numeric(tree_precision)
+  ),
+
+  Recall = c(
+    as.numeric(log_recall),
+    as.numeric(tree_recall)
+  ),
+
+  AUC = c(
+    as.numeric(log_auc),
+    as.numeric(tree_auc)
+  )
+)
+
+
+# ------------------------------------------------------------
+# 33. DISPLAY PERFORMANCE TABLE
+# ------------------------------------------------------------
+
+print(performance)
+
+
+# ------------------------------------------------------------
+# 34. ROUND PERFORMANCE VALUES
+# ------------------------------------------------------------
+
+performance_rounded <- performance %>%
+  mutate(
+    Accuracy = round(Accuracy, 3),
+    Precision = round(Precision, 3),
+    Recall = round(Recall, 3),
+    AUC = round(AUC, 3)
+  )
+
+print(performance_rounded)
+
+
+# ============================================================
+# MODEL DIAGNOSTICS
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 35. LOGISTIC REGRESSION DIAGNOSTIC PLOTS
+# ------------------------------------------------------------
+
+par(mfrow = c(2, 2))
+
+plot(
+  log_model,
+  main = "Logistic Regression Diagnostics"
+)
+
+
+# Reset plotting layout
+par(mfrow = c(1, 1))
+
+
+# ============================================================
+# SAVE RESULTS
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 36. CREATE OUTPUT DIRECTORY
+# ------------------------------------------------------------
+# The directory is created if it does not already exist.
+
+if (!dir.exists("output")) {
+  dir.create("output")
+}
+
+
+# ------------------------------------------------------------
+# 37. SAVE PERFORMANCE RESULTS AS CSV
+# ------------------------------------------------------------
+
+write_csv(
+  performance_rounded,
+  "output/model_performance.csv"
+)
+
+
+# ------------------------------------------------------------
+# 38. SAVE LOGISTIC REGRESSION MODEL
+# ------------------------------------------------------------
+
+saveRDS(
+  log_model,
+  "output/logistic_regression_model.rds"
+)
+
+
+# ------------------------------------------------------------
+# 39. SAVE DECISION TREE MODEL
+# ------------------------------------------------------------
+
+saveRDS(
+  tree_model,
+  "output/decision_tree_model.rds"
+)
+
+
+# ============================================================
+# FINAL PROJECT SUMMARY
+# ============================================================
+
+
+cat("\n")
+cat("====================================================\n")
+cat("       PREDICTIVE MODELING PROJECT COMPLETE\n")
+cat("====================================================\n")
+
+cat("\nModels Used:\n")
+cat("1. Logistic Regression\n")
+cat("2. Decision Tree\n")
+
+cat("\nEvaluation Metrics:\n")
+cat("Accuracy\n")
+cat("Precision\n")
+cat("Recall\n")
+cat("AUC\n")
+
+cat("\nPerformance Results:\n")
+print(performance_rounded)
+
+cat("\nOutput files have been saved in the 'output' folder.\n")
+
+cat("====================================================\n")
