@@ -1,0 +1,283 @@
+1. Install and load packages
+install.packages("tidyverse")
+install.packages("janitor")
+
+library(tidyverse)
+library(janitor)
+2. Import dataset
+data <- read_csv("data/student_performance_raw_with_issues.csv")
+
+head(data)
+tail(data)
+3. Understand the dataset
+# Number of rows and columns
+dim(data)
+
+# Column names
+names(data)
+
+# Structure of dataset
+str(data)
+
+# Summary statistics
+summary(data)
+4. Check missing values
+# Missing values in each column
+colSums(is.na(data))
+
+# Total missing values
+sum(is.na(data))
+5. Check duplicate records
+# Number of duplicate rows
+sum(duplicated(data))
+
+# Display duplicate rows
+data[duplicated(data), ]
+6. Check data types
+str(data)
+
+# Convert numerical columns
+data$studytime <- as.numeric(data$studytime)
+data$absences <- as.numeric(data$absences)
+data$G1 <- as.numeric(data$G1)
+data$G2 <- as.numeric(data$G2)
+data$G3 <- as.numeric(data$G3)
+7. Clean categorical data
+data <- data %>%
+  mutate(
+    sex = str_trim(str_to_upper(sex)),
+    school = str_trim(str_to_upper(school))
+  )
+
+# Correct inconsistent value
+data$sex <- recode(
+  data$sex,
+  "MALE" = "M",
+  "FEMALE" = "F"
+)
+
+# Convert to factor
+data$sex <- as.factor(data$sex)
+data$school <- as.factor(data$school)
+
+table(data$sex)
+table(data$school)
+8. Handle missing values
+# Replace missing absences with median
+data$absences <- ifelse(
+  is.na(data$absences),
+  median(data$absences, na.rm = TRUE),
+  data$absences
+)
+
+# Check again
+colSums(is.na(data))
+9. Remove duplicate rows
+data <- data %>%
+  distinct()
+
+# Check duplicates again
+sum(duplicated(data))
+10. Detect and handle invalid G3 values
+# Check minimum and maximum
+min(data$G3, na.rm = TRUE)
+max(data$G3, na.rm = TRUE)
+
+# Keep G3 between 0 and 20
+data$G3 <- pmin(pmax(data$G3, 0), 20)
+
+# Check again
+range(data$G3, na.rm = TRUE)
+11. Create new features
+data <- data %>%
+  mutate(
+    total_grade = G1 + G2 + G3,
+    average_grade = (G1 + G2 + G3) / 3
+  )
+
+head(data)
+12. Create Pass/Below Pass category
+data <- data %>%
+  mutate(
+    pass_status = ifelse(
+      G3 >= 10,
+      "Pass",
+      "Below Pass"
+    )
+  )
+
+table(data$pass_status)
+13. Encode categorical variable
+data <- data %>%
+  mutate(
+    sex_encoded = ifelse(
+      sex == "M",
+      1,
+      0
+    )
+  )
+
+head(data)
+14. Normalize absences
+data <- data %>%
+  mutate(
+    absences_scaled =
+      (absences - min(absences)) /
+      (max(absences) - min(absences))
+  )
+
+summary(data$absences_scaled)
+15. Final data inspection
+str(data)
+
+summary(data)
+
+head(data)
+
+dim(data)
+16. Compare before and after
+cat("Final number of rows:", nrow(data), "\n")
+cat("Final number of columns:", ncol(data), "\n")
+
+cat("Missing values:",
+    sum(is.na(data)), "\n")
+
+cat("Duplicate rows:",
+    sum(duplicated(data)), "\n")
+17. Save cleaned dataset
+write_csv(
+  data,
+  "data/student_performance_cleaned.csv"
+)
+18. Complete code in one R file
+Save this as:
+week2_data_wrangling.R
+# ==========================================
+# DATA WRANGLING AND PREPROCESSING USING R
+# ==========================================
+
+library(tidyverse)
+library(janitor)
+
+# 1. Import Dataset
+data <- read_csv(
+  "data/student_performance_raw_with_issues.csv"
+)
+
+# 2. Initial Inspection
+head(data)
+tail(data)
+dim(data)
+names(data)
+str(data)
+summary(data)
+
+# 3. Missing Value Check
+colSums(is.na(data))
+sum(is.na(data))
+
+# 4. Duplicate Check
+sum(duplicated(data))
+
+# 5. Correct Data Types
+data <- data %>%
+  mutate(
+    studytime = as.numeric(studytime),
+    absences = as.numeric(absences),
+    G1 = as.numeric(G1),
+    G2 = as.numeric(G2),
+    G3 = as.numeric(G3)
+  )
+
+# 6. Standardize Text
+data <- data %>%
+  mutate(
+    sex = str_trim(str_to_upper(sex)),
+    school = str_trim(str_to_upper(school))
+  )
+
+# 7. Correct Categorical Values
+data$sex <- recode(
+  data$sex,
+  "MALE" = "M",
+  "FEMALE" = "F"
+)
+
+# 8. Convert Categorical Variables
+data$sex <- as.factor(data$sex)
+data$school <- as.factor(data$school)
+
+# 9. Handle Missing Values
+data$absences <- ifelse(
+  is.na(data$absences),
+  median(data$absences, na.rm = TRUE),
+  data$absences
+)
+
+# 10. Remove Duplicates
+data <- data %>%
+  distinct()
+
+# 11. Validate Final Grade
+data$G3 <- pmin(
+  pmax(data$G3, 0),
+  20
+)
+
+# 12. Feature Extraction
+data <- data %>%
+  mutate(
+    total_grade = G1 + G2 + G3,
+    average_grade = (G1 + G2 + G3) / 3
+  )
+
+# 13. Performance Category
+data <- data %>%
+  mutate(
+    pass_status = ifelse(
+      G3 >= 10,
+      "Pass",
+      "Below Pass"
+    )
+  )
+
+# 14. Categorical Encoding
+data <- data %>%
+  mutate(
+    sex_encoded = ifelse(
+      sex == "M",
+      1,
+      0
+    )
+  )
+
+# 15. Min-Max Scaling
+data <- data %>%
+  mutate(
+    absences_scaled =
+      (absences - min(absences)) /
+      (max(absences) - min(absences))
+  )
+
+# 16. Final Validation
+print(dim(data))
+print(str(data))
+print(summary(data))
+
+cat(
+  "Missing Values:",
+  sum(is.na(data)),
+  "\n"
+)
+
+cat(
+  "Duplicate Rows:",
+  sum(duplicated(data)),
+  "\n"
+)
+
+# 17. Save Clean Dataset
+write_csv(
+  data,
+  "data/student_performance_cleaned.csv"
+)
